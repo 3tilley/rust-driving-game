@@ -1,6 +1,7 @@
 use bevy::{
     prelude::*,
 };
+use rust_driving_game::car::Car;
 use rust_driving_game::input::{Accelerator, KeyInput};
 
 fn main() {
@@ -15,15 +16,15 @@ fn main() {
 }
 
 #[derive(Component)]
-struct Car;
+struct CarComponent(Car);
 
 fn move_car(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<&mut Transform, With<Car>>,
+    mut query: Query<(&mut Transform, &mut CarComponent)>,
     time: Res<Time>,
 ) {
     let mut car_transform = query.single_mut();
-    let accelerate = {
+    let key_input = {
         let is_up = keyboard_input.pressed(KeyCode::Up);
         let is_down = keyboard_input.pressed(KeyCode::Down);
         let is_left = keyboard_input.pressed(KeyCode::Left);
@@ -32,5 +33,8 @@ fn move_car(
         let dir = Direction::from_left_right(is_left, is_right);
         KeyInput::new(acc, dir)
     };
+    let transform = car_transform.
+
+
 
 }
