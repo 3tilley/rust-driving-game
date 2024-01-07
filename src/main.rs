@@ -1,18 +1,46 @@
 use bevy::{
     prelude::*,
 };
-use rust_driving_game::car::Car;
-use rust_driving_game::input::{Accelerator, KeyInput};
+use rust_driving_game::car::{Car, PhysicsConstants};
+use rust_driving_game::input::{Accelerator, Direction, KeyInput};
 
 fn main() {
-    App::build()
+    App::new()
         .add_plugins(DefaultPlugins)
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
-        // .add_startup_system(setup.system())
-        .add_system(FixedUpdate, (
+        .add_systems(Startup, setup)
+        .add_systems(FixedUpdate, (
             move_car,
             ))
         .run();
+}
+
+const CAR_SIZE: Vec3 = Vec3::new(2.0, 5.0, 0.0);
+const CAR_COLOUR: Color = Color::rgb(0.3, 0.3, 0.7);
+
+
+fn setup(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
+) {
+    commands.spawn(Camera2dBundle::default());
+
+    commands.spawn((
+        SpriteBundle {
+            transform: Transform {
+                translation: Vec3::new(0.0, 0.0, 0.0),
+                scale: CAR_SIZE,
+                ..default()
+            },
+            sprite: Sprite {
+                color: CAR_COLOUR,
+                ..default()
+            },
+            ..default()
+        }
+        ,CarComponent(Car::default())));
 }
 
 #[derive(Component)]
@@ -31,10 +59,10 @@ fn move_car(
         let is_right = keyboard_input.pressed(KeyCode::Right);
         let acc = Accelerator::from_up_down(is_up, is_down);
         let dir = Direction::from_left_right(is_left, is_right);
-        KeyInput::new(acc, dir)
+        Some(KeyInput::new(acc, dir))
     };
-    let transform = car_transform.
-
-
-
+    let consts = PhysicsConstants::default();
+    let (x_d, y_d, theta_d) = car_transform.1.0.update_position(&consts, time.delta_seconds(), key_input);
+    car_transform.0.rotate_local_z(theta_d);
+    car_transform.0.translation += Vec3::new(x_d, y_d, 0.0);
 }

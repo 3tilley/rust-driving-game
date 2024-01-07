@@ -13,7 +13,7 @@ impl Default for PhysicsConstants {
     fn default() -> Self {
         PhysicsConstants {
             // mph * 4/9 gives ms-1
-            forward_acceleration_mss: 2.0,
+            forward_acceleration_mss: 20.0,
             braking_acceleration_mss: 4.0,
             reverse_acceleration_mss: 0.5,
             max_forward_speed_ms: 50.0,
@@ -24,6 +24,7 @@ impl Default for PhysicsConstants {
     }
 }
 
+#[derive(Copy, Clone, Default, Debug)]
 pub struct Car {
     // x goes from left to right: +x points right
     pub x: f32,
@@ -75,6 +76,6 @@ impl Car {
         let y_change =  pos_change * self.direction_radians.cos();
         self.x += x_change;
         self.y += y_change;
-        (x_change, y_change, theta_change)
+        (x_change, y_change, -theta_change)
     }
 }
