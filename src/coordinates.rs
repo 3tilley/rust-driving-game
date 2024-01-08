@@ -4,6 +4,11 @@ pub struct Vec2d {
     pub x: f32,
     pub y: f32,
 }
+impl Vec2d {
+    pub fn distance(&self, other: Vec2d) -> f32 {
+        ((self.x - other.x).powi(2) + (self.y - other.y).powi(2)).sqrt()
+    }
+}
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum Axis {
