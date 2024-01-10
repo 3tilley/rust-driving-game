@@ -1,17 +1,22 @@
+use std::ops::Neg;
 use bevy::{
     prelude::*,
 };
+// use bevy_ninepatch::*;
+use bevy_nine_slice_ui::NineSliceMaterial;
+use bevy_debug_grid::*;
 use rust_driving_game::car::{Car, PhysicsConstants};
-use rust_driving_game::coordinates::{Boundary, Vec2d};
+use rust_driving_game::coordinates::{Boundary, LineType, Vec2d};
 use rust_driving_game::input::{Accelerator, Direction, KeyInput};
 use rust_driving_game::track::{ParallelRectSection, Track};
+use rust_driving_game::debug_grid::spawn_floor_grid;
 
 fn main() {
     App::new()
-        .add_plugins(DefaultPlugins)
+        .add_plugins((DefaultPlugins, DebugGridPlugin::without_floor_grid()))
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
         // .insert_non_send_resource(track)
-        .add_systems(Startup, setup)
+        .add_systems(Startup, (setup, spawn_floor_grid))
         .add_systems(FixedUpdate, (
             move_car,
             check_state,
@@ -55,9 +60,8 @@ impl WallBundle {
             scale: Vec2::new(WALL_WIDTH, len).extend(1.0),
             ..default()
         };
-        transform.translation -= Vec3::new(0.0, len / 2.0, 0.0);
-        transform.rotate_z((end_loc - start_loc).angle_between(Vec3::Y));
-        WallBundle {
+        transform.translation += Vec3::new(0.0, len / 2.0, 0.0);
+        let mut bundle = WallBundle {
             sprite_bundle: SpriteBundle {
                 transform,
                 sprite: Sprite {
@@ -66,7 +70,10 @@ impl WallBundle {
                 },
                 ..default()
             },
-        }
+        };
+        // transform.rotate_z((end_loc - start_loc).angle_between(Vec3::Y));
+        bundle.sprite_bundle.transform.rotate_around(start_loc, Quat::from_rotation_z((end_loc - start_loc).angle_between(Vec3::Y)));
+        bundle
     }
 }
 
@@ -76,14 +83,14 @@ fn make_track(
     // world: &mut World
 ) -> TrackComponent {
     let track_sect = ParallelRectSection {
-        left_x: -20.0,
-        right_x: 20.0,
-        top_y: 50.0,
+        left_x: -50.0,
+        right_x: 50.0,
+        top_y: 380.0,
         bottom_y: -10.0,
     };
     let track = Track{
         start: Default::default(),
-        finish_line: Boundary::horizontal(45.0, true),
+        finish_line: Boundary::horizontal(350.0, true),
         sections: vec![Box::new(track_sect)],
     };
     // world.insert_non_send_resource(TrackComponent(track));
@@ -92,9 +99,8 @@ fn make_track(
 
 fn setup(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
     asset_server: Res<AssetServer>,
+    // mut nine_patches: ResMut<Assets<NinePatchBuilder<()>>>,
 ) {
     commands.spawn(Camera2dBundle::default());
 
@@ -150,9 +156,42 @@ fn setup(
         })
     });
 
-    commands.spawn((
+    commands.spawn(
         make_track()
-    ));
+    );
+
+    // Finish line sprite
+    let finish_line_handle = asset_server.load("finish-line-64x64.png");
+    // let nine_patch_handle = nine_patches.add(NinePatchBuilder::by_margins(16,16,16,16));
+    // let texture = NineSliceMaterial:: from_slice(
+    //     asset_server.load("panel_atlas.png"),
+    //     Rect::new(0., 0., 32., 32.),
+    // );
+    let (finish_pos, finish_scale) = match track.0.finish_line.line_type {
+        LineType::Horizontal(y) => (Vec3::new(0.0, y, 0.0), Vec3::new(50.0, 4.0, 0.0) / 8.0),
+        LineType::Vertical(x) => (Vec3::new(x, 0.0, 0.0), Vec3::new(4.0, 50.0, 0.0) / 8.0),
+        LineType::Diagonal(_, _) => unimplemented!(),
+    };
+    let finish_line_bundle = SpriteBundle {
+
+        transform: Transform {
+            translation: finish_pos,
+            scale: finish_scale,
+            ..default()
+        },
+        texture: finish_line_handle,
+        sprite: Sprite {
+            flip_x: false,
+            flip_y: false,
+            custom_size: None,
+            rect: None,
+            anchor: Default::default(),
+            ..default()
+        },
+        ..default()
+    };
+    commands.spawn(finish_line_bundle);
+
 }
 
 #[derive(Component)]

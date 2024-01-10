@@ -1,8 +1,10 @@
+use std::cmp::min;
 use crate::coordinates::Vec2d;
 use crate::input::{Accelerator, Direction, KeyInput};
 use crate::track::Track;
 
 pub enum CarState {
+    StartLine,
     Finished,
     Racing,
     Crashed,
@@ -11,6 +13,7 @@ pub enum CarState {
 impl CarState {
     pub fn to_string(&self) -> String {
         match self {
+            CarState::StartLine => "StartLine".to_string(),
             CarState::Finished => "Finished".to_string(),
             CarState::Racing => "Racing".to_string(),
             CarState::Crashed => "Crashed".to_string(),
@@ -70,7 +73,7 @@ impl Car {
                 Some(Accelerator::Accelerate) => consts.forward_acceleration_mss,
                 Some(Accelerator::Brake) => {
                     if self.velocity > 0.0 {
-                        -consts.forward_acceleration_mss
+                        -consts.braking_acceleration_mss
                     } else {
                         -consts.reverse_acceleration_mss
                     }
@@ -79,7 +82,10 @@ impl Car {
             }
         });
         self.velocity += accel * delta_time_s;
-        let pos_change = self.velocity * delta_time_s + 0.5 * delta_time_s * accel * accel;
+        // Must be a neater way to get the sign right
+        let sign = if accel > 0.0 {1.0} else {-1.0};
+        let pos_change = self.velocity * delta_time_s + 0.5 * delta_time_s * accel * accel * (sign);
+        let capped_pos_change = if (pos_change > consts.max_forward_speed_ms * delta_time_s) {self.velocity * delta_time_s} else {pos_change};
         let direction_change = key_input.map_or(0.0, |k| {
             match k.direction {
                 None => 0.0,
@@ -89,8 +95,8 @@ impl Car {
         });
         let theta_change = delta_time_s * direction_change;
         self.direction_radians += theta_change;
-        let x_change = pos_change * self.direction_radians.sin();
-        let y_change =  pos_change * self.direction_radians.cos();
+        let x_change = capped_pos_change * self.direction_radians.sin();
+        let y_change =  capped_pos_change * self.direction_radians.cos();
         self.pos.x += x_change;
         self.pos.y += y_change;
         (x_change, y_change, -theta_change)
