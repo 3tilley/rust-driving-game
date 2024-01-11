@@ -1,15 +1,14 @@
+use bevy::prelude::*;
 use std::ops::Neg;
-use bevy::{
-    prelude::*,
-};
 // use bevy_ninepatch::*;
-use bevy_nine_slice_ui::NineSliceMaterial;
 use bevy_debug_grid::*;
+use bevy_nine_slice_ui::NineSliceMaterial;
 use rust_driving_game::car::{Car, CarState, PhysicsConstants};
+use rust_driving_game::car_progress::CarProgress;
 use rust_driving_game::coordinates::{Boundary, LineType, Vec2d};
+use rust_driving_game::debug_grid::spawn_floor_grid;
 use rust_driving_game::input::{Accelerator, Direction, KeyInput};
 use rust_driving_game::track::{ParallelRectSection, Track};
-use rust_driving_game::debug_grid::spawn_floor_grid;
 
 fn main() {
     App::new()
@@ -17,10 +16,7 @@ fn main() {
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
         // .insert_non_send_resource(track)
         .add_systems(Startup, (setup, spawn_floor_grid))
-        .add_systems(FixedUpdate, (
-            move_car,
-            check_state,
-            ))
+        .add_systems(FixedUpdate, (move_car, check_state, reset_car))
         .run();
 }
 
@@ -28,6 +24,7 @@ const CAR_SIZE: Vec3 = Vec3::new(2.0, 5.0, 0.0);
 const CAR_COLOUR: Color = Color::rgb(0.3, 0.3, 0.7);
 const SCOREBOARD_FONT_SIZE: f32 = 40.0;
 const SCOREBOARD_TEXT_PADDING: Val = Val::Px(5.0);
+const STATEBOARD_TEXT_PADDING: Val = Val::Px(25.0);
 const TEXT_COLOR: Color = Color::BLACK;
 const SCORE_COLOR: Color = Color::rgb(1.0, 0.5, 0.5);
 // const WALL_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
@@ -72,15 +69,15 @@ impl WallBundle {
             },
         };
         // transform.rotate_z((end_loc - start_loc).angle_between(Vec3::Y));
-        bundle.sprite_bundle.transform.rotate_around(start_loc, Quat::from_rotation_z((end_loc - start_loc).angle_between(Vec3::Y)));
+        bundle.sprite_bundle.transform.rotate_around(
+            start_loc,
+            Quat::from_rotation_z((end_loc - start_loc).angle_between(Vec3::Y)),
+        );
         bundle
     }
 }
 
-
-
-fn make_track(
-    // world: &mut World
+fn make_track(// world: &mut World
 ) -> TrackComponent {
     let track_sect = ParallelRectSection {
         left_x: -50.0,
@@ -88,7 +85,7 @@ fn make_track(
         top_y: 380.0,
         bottom_y: -10.0,
     };
-    let track = Track{
+    let track = Track {
         start: Default::default(),
         finish_line: Boundary::horizontal(350.0, true),
         sections: vec![Box::new(track_sect)],
@@ -116,8 +113,10 @@ fn setup(
                 ..default()
             },
             ..default()
-        }
-        ,CarComponent(Car::default())));
+        },
+        CarComponent(Car::default()),
+        CarProgressComponent(CarProgress::default()),
+    ));
 
     // Scoreboard
     commands.spawn(
@@ -141,13 +140,27 @@ fn setup(
                 ..default()
             }),
         ])
-            .with_style(Style {
-                position_type: PositionType::Absolute,
-                top: SCOREBOARD_TEXT_PADDING,
-                left: SCOREBOARD_TEXT_PADDING,
-                ..default()
-            }),
+        .with_style(Style {
+            position_type: PositionType::Absolute,
+            top: SCOREBOARD_TEXT_PADDING,
+            left: SCOREBOARD_TEXT_PADDING,
+            ..default()
+        }),
     );
+
+    commands.spawn((TextBundle::from_section("",
+        TextStyle {
+            font_size: SCOREBOARD_FONT_SIZE,
+            color: SCORE_COLOR,
+            ..default()
+        }).with_style(
+        Style {
+            position_type: PositionType::Absolute,
+            top: STATEBOARD_TEXT_PADDING,
+            left: SCOREBOARD_TEXT_PADDING,
+            ..default()
+        },
+    ), StateBoard));
 
     let track = make_track();
     track.0.sections.iter().for_each(|section| {
@@ -156,9 +169,7 @@ fn setup(
         })
     });
 
-    commands.spawn(
-        make_track()
-    );
+    commands.spawn(make_track());
 
     // Finish line sprite
     let finish_line_handle = asset_server.load("finish-line-64x64.png");
@@ -173,7 +184,6 @@ fn setup(
         LineType::Diagonal(_, _) => unimplemented!(),
     };
     let finish_line_bundle = SpriteBundle {
-
         transform: Transform {
             translation: finish_pos,
             scale: finish_scale,
@@ -191,19 +201,27 @@ fn setup(
         ..default()
     };
     commands.spawn(finish_line_bundle);
-
 }
 
 #[derive(Component)]
 struct CarComponent(Car);
 
 #[derive(Component)]
+struct CarProgressComponent(CarProgress);
+
+#[derive(Component)]
 // #[derive()]
 struct TrackComponent(Track);
 
+#[derive(Component)]
+struct StateBoard;
+
+#[derive(Component)]
+struct ScoreBoard;
+
 fn move_car(
     keyboard_input: Res<Input<KeyCode>>,
-    mut query: Query<(&mut Transform, &mut CarComponent)>,
+    mut query: Query<(&mut Transform, &mut CarComponent, &mut CarProgressComponent)>,
     time: Res<Time>,
 ) {
     let mut car = query.single_mut();
@@ -220,11 +238,17 @@ fn move_car(
             None
         }
     };
-    match car.1.0.state {
-        CarState::StartLine if key_input.is_some() => car.1.0.state = CarState::Racing,
+    match car.1 .0.state {
+        CarState::StartLine if key_input.is_some() => {
+            car.1 .0.state = CarState::Racing;
+            car.2 .0.start_time = time.elapsed_seconds();
+        }
         CarState::Racing => {
             let consts = PhysicsConstants::default();
-            let (x_d, y_d, theta_d) = car.1.0.update_position(&consts, time.delta_seconds(), key_input);
+            let (x_d, y_d, theta_d) =
+                car.1
+                     .0
+                    .update_position(&consts, time.delta_seconds(), key_input);
             car.0.rotate_local_z(theta_d);
             car.0.translation += Vec3::new(x_d, y_d, 0.0);
         }
@@ -232,16 +256,39 @@ fn move_car(
     }
 }
 
+fn reset_car(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut car_query: Query<(&mut Transform, &mut CarComponent, &mut CarProgressComponent)>,
+    track_query: Query<&TrackComponent>,
+) {
+    let track = track_query.single();
+    let mut car_result = car_query.single_mut();
+    let start_pos = track.0.start;
+    if keyboard_input.pressed(KeyCode::R) {
+        car_result.1 .0.reset(start_pos);
+        car_result.2 .0 = CarProgress::default();
+        car_result.0.translation = Vec3::new(start_pos.x, start_pos.y, 0.0);
+        car_result.0.rotation = Quat::from_rotation_z(0.0);
+    }
+}
+
 fn check_state(
-    mut car_query: Query<&mut CarComponent>,
+    mut car_query: Query<(&mut CarComponent, &mut CarProgressComponent)>,
     track_res: Query<&TrackComponent>,
-    mut text_query: Query<&mut Text>,
+    mut score_query: Query<(&mut Text, &ScoreBoard)>,
+    mut state_query: Query<(&mut Text, &StateBoard)>,
+    time: Res<Time>,
 ) {
     let mut car = car_query.single_mut();
     let track = track_res.single();
-    car.0.update_state(&track.0);
-    let state = car.0.state;
-    let mut text = text_query.single_mut();
-    text.sections[2].value = state.to_string().into();
-
+    car.0
+         .0
+        .update_state(&track.0, &mut car.1 .0, time.elapsed_seconds());
+    let state = car.0 .0.state;
+    let mut timer = score_query.single_mut();
+    let mut state_board = state_query.single_mut();
+    if state == CarState::Racing {
+        timer.0.sections[1].value = format!("{:.2}", time.elapsed_seconds() - car.1 .0.start_time);
+    }
+    state_board.0.sections[0].value = state.to_string().into();
 }

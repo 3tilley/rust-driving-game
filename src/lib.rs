@@ -1,6 +1,6 @@
-pub mod input;
 pub mod car;
-pub mod track;
+pub mod car_progress;
 pub mod coordinates;
 pub mod debug_grid;
-pub mod game_state;
+pub mod input;
+pub mod track;

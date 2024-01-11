@@ -1,8 +1,9 @@
-use std::cmp::min;
+use crate::car_progress::CarProgress;
 use crate::coordinates::Vec2d;
-use crate::game_state::GameState;
 use crate::input::{Accelerator, Direction, KeyInput};
 use crate::track::Track;
+use bevy::math::Vec3;
+use std::cmp::min;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Default)]
 pub enum CarState {
@@ -61,6 +62,23 @@ pub struct Car {
 }
 
 impl Car {
+    pub fn new(pos: Vec2d) -> Car {
+        Car {
+            pos,
+            previous_pos: pos,
+            direction_radians: 0.0,
+            velocity: 0.0,
+            state: CarState::StartLine,
+        }
+    }
+
+    pub fn reset(&mut self, start_line: Vec2d) {
+        self.pos = start_line;
+        self.previous_pos = start_line;
+        self.velocity = 0.0;
+        self.direction_radians = 0.0;
+        self.state = CarState::StartLine;
+    }
     pub fn x_velocity(&self) -> f32 {
         self.velocity * self.direction_radians.sin()
     }
@@ -69,45 +87,49 @@ impl Car {
         self.velocity * self.direction_radians.cos()
     }
 
-    pub fn update_position(&mut self, consts: &PhysicsConstants, delta_time_s: f32, key_input: Option<KeyInput>) -> (f32, f32, f32) {
+    pub fn update_position(
+        &mut self,
+        consts: &PhysicsConstants,
+        delta_time_s: f32,
+        key_input: Option<KeyInput>,
+    ) -> (f32, f32, f32) {
         // position += velocity * delta + acceleration * delta * delta * 0.5
-        let accel = key_input.map_or(0.0, |k| {
-            match k.acceleration {
-                None => 0.0,
-                Some(Accelerator::Accelerate) => consts.forward_acceleration_mss,
-                Some(Accelerator::Brake) => {
-                    if self.velocity > 0.0 {
-                        -consts.braking_acceleration_mss
-                    } else {
-                        -consts.reverse_acceleration_mss
-                    }
-
+        let accel = key_input.map_or(0.0, |k| match k.acceleration {
+            None => 0.0,
+            Some(Accelerator::Accelerate) => consts.forward_acceleration_mss,
+            Some(Accelerator::Brake) => {
+                if self.velocity > 0.0 {
+                    -consts.braking_acceleration_mss
+                } else {
+                    -consts.reverse_acceleration_mss
                 }
             }
         });
         self.velocity += accel * delta_time_s;
         // Must be a neater way to get the sign right
-        let sign = if accel > 0.0 {1.0} else {-1.0};
+        let sign = if accel > 0.0 { 1.0 } else { -1.0 };
         let pos_change = self.velocity * delta_time_s + 0.5 * delta_time_s * accel * accel * (sign);
-        let capped_pos_change = if (pos_change > consts.max_forward_speed_ms * delta_time_s) {self.velocity * delta_time_s} else {pos_change};
-        let direction_change = key_input.map_or(0.0, |k| {
-            match k.direction {
-                None => 0.0,
-                Some(Direction::Left) => -consts.turn_rate_rs,
-                Some(Direction::Right) => consts.turn_rate_rs,
-            }
+        let capped_pos_change = if (pos_change > consts.max_forward_speed_ms * delta_time_s) {
+            self.velocity * delta_time_s
+        } else {
+            pos_change
+        };
+        let direction_change = key_input.map_or(0.0, |k| match k.direction {
+            None => 0.0,
+            Some(Direction::Left) => -consts.turn_rate_rs,
+            Some(Direction::Right) => consts.turn_rate_rs,
         });
         let theta_change = delta_time_s * direction_change;
         self.direction_radians += theta_change;
         let x_change = capped_pos_change * self.direction_radians.sin();
-        let y_change =  capped_pos_change * self.direction_radians.cos();
+        let y_change = capped_pos_change * self.direction_radians.cos();
         self.previous_pos = self.pos;
         self.pos.x += x_change;
         self.pos.y += y_change;
         (x_change, y_change, -theta_change)
     }
 
-    pub fn update_state(&mut self, track: &Track, game_state: &mut GameState, game_time_s: f32) {
+    pub fn update_state(&mut self, track: &Track, game_state: &mut CarProgress, game_time_s: f32) {
         match self.state {
             CarState::Racing => {
                 if track.is_within_track(&self.pos) {
@@ -127,5 +149,4 @@ impl Car {
             _ => {}
         }
     }
-
 }

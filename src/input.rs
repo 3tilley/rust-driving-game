@@ -53,20 +53,16 @@ impl KeyInput {
             direction,
         }
     }
-     pub fn is_empty(&self) -> bool {
-         self.acceleration.is_none() && self.direction.is_none()
-     }
+    pub fn is_empty(&self) -> bool {
+        self.acceleration.is_none() && self.direction.is_none()
+    }
 }
-
 
 pub trait Input {
     fn get_input() -> KeyInput;
 }
 
-pub struct TerminalInput {
-
-
-}
+pub struct TerminalInput {}
 
 // impl Input for TerminalInput {
 //

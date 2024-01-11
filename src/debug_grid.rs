@@ -19,7 +19,7 @@ pub fn spawn_floor_grid(mut commands: Commands) {
             ..default()
         },
         TransformBundle::from_transform(
-            Transform::from_xyz(0.0, 0.0, 0.1).with_rotation(Quat::from_rotation_x(1.0))
+            Transform::from_xyz(0.0, 0.0, 0.1).with_rotation(Quat::from_rotation_x(1.0)),
         ),
         VisibilityBundle::default(),
     ));

@@ -1,4 +1,3 @@
-
 #[derive(Copy, Clone, Debug, Default)]
 pub struct Vec2d {
     pub x: f32,
@@ -21,7 +20,7 @@ pub enum LineType {
     Vertical(f32),
     // y = mx + c
     // Args are m, c
-    Diagonal(f32, f32)
+    Diagonal(f32, f32),
 }
 
 pub struct Boundary {
@@ -52,8 +51,12 @@ impl Boundary {
         // 0                    1               |   0
         // 0                    0               |   1
         match self.line_type {
-            LineType::Horizontal(y_intercept) => !((point.y > y_intercept) ^ self.positive_inf_within),
-            LineType::Vertical(x_intercept) => !((point.x > x_intercept) ^ self.positive_inf_within),
+            LineType::Horizontal(y_intercept) => {
+                !((point.y > y_intercept) ^ self.positive_inf_within)
+            }
+            LineType::Vertical(x_intercept) => {
+                !((point.x > x_intercept) ^ self.positive_inf_within)
+            }
             LineType::Diagonal(m, c_y) => {
                 let y_line = m * point.x + c_y;
                 !((point.y > y_line) ^ self.positive_inf_within)
