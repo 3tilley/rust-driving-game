@@ -5,7 +5,7 @@ use bevy::{
 // use bevy_ninepatch::*;
 use bevy_nine_slice_ui::NineSliceMaterial;
 use bevy_debug_grid::*;
-use rust_driving_game::car::{Car, PhysicsConstants};
+use rust_driving_game::car::{Car, CarState, PhysicsConstants};
 use rust_driving_game::coordinates::{Boundary, LineType, Vec2d};
 use rust_driving_game::input::{Accelerator, Direction, KeyInput};
 use rust_driving_game::track::{ParallelRectSection, Track};
@@ -28,7 +28,7 @@ const CAR_SIZE: Vec3 = Vec3::new(2.0, 5.0, 0.0);
 const CAR_COLOUR: Color = Color::rgb(0.3, 0.3, 0.7);
 const SCOREBOARD_FONT_SIZE: f32 = 40.0;
 const SCOREBOARD_TEXT_PADDING: Val = Val::Px(5.0);
-const TEXT_COLOR: Color = Color::rgb(0.5, 0.5, 1.0);
+const TEXT_COLOR: Color = Color::BLACK;
 const SCORE_COLOR: Color = Color::rgb(1.0, 0.5, 0.5);
 // const WALL_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
 const WALL_COLOR: Color = Color::BLACK;
@@ -214,24 +214,34 @@ fn move_car(
         let is_right = keyboard_input.pressed(KeyCode::Right);
         let acc = Accelerator::from_up_down(is_up, is_down);
         let dir = Direction::from_left_right(is_left, is_right);
-        Some(KeyInput::new(acc, dir))
+        if acc.is_some() || dir.is_some() {
+            Some(KeyInput::new(acc, dir))
+        } else {
+            None
+        }
     };
-    let consts = PhysicsConstants::default();
-    let (x_d, y_d, theta_d) = car.1.0.update_position(&consts, time.delta_seconds(), key_input);
-    car.0.rotate_local_z(theta_d);
-    car.0.translation += Vec3::new(x_d, y_d, 0.0);
+    match car.1.0.state {
+        CarState::StartLine if key_input.is_some() => car.1.0.state = CarState::Racing,
+        CarState::Racing => {
+            let consts = PhysicsConstants::default();
+            let (x_d, y_d, theta_d) = car.1.0.update_position(&consts, time.delta_seconds(), key_input);
+            car.0.rotate_local_z(theta_d);
+            car.0.translation += Vec3::new(x_d, y_d, 0.0);
+        }
+        _ => {}
+    }
 }
 
 fn check_state(
-    mut car_query: Query<&CarComponent>,
+    mut car_query: Query<&mut CarComponent>,
     track_res: Query<&TrackComponent>,
     mut text_query: Query<&mut Text>,
 ) {
-    let car = car_query.single();
+    let mut car = car_query.single_mut();
     let track = track_res.single();
-    let state = car.0.get_state(&track.0);
+    car.0.update_state(&track.0);
+    let state = car.0.state;
     let mut text = text_query.single_mut();
-    text.sections[2] = state.to_string().into();
-
+    text.sections[2].value = state.to_string().into();
 
 }

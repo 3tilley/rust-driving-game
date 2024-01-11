@@ -1,9 +1,12 @@
 use std::cmp::min;
 use crate::coordinates::Vec2d;
+use crate::game_state::GameState;
 use crate::input::{Accelerator, Direction, KeyInput};
 use crate::track::Track;
 
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Default)]
 pub enum CarState {
+    #[default]
     StartLine,
     Finished,
     Racing,
@@ -50,10 +53,11 @@ pub struct Car {
     // x goes from left to right: +x points right
     // y goes from bottom to top: +y points up
     pub pos: Vec2d,
+    pub previous_pos: Vec2d,
     // This is relative to the y axis. 0 points up, 90 points right
     pub direction_radians: f32,
     pub velocity: f32,
-
+    pub state: CarState,
 }
 
 impl Car {
@@ -97,20 +101,31 @@ impl Car {
         self.direction_radians += theta_change;
         let x_change = capped_pos_change * self.direction_radians.sin();
         let y_change =  capped_pos_change * self.direction_radians.cos();
+        self.previous_pos = self.pos;
         self.pos.x += x_change;
         self.pos.y += y_change;
         (x_change, y_change, -theta_change)
     }
 
-    pub fn get_state(&self, track: &Track) -> CarState {
-        if track.is_within_track(&self.pos) {
-            if track.is_finished(&self.pos) {
-                CarState::Finished
-            } else {
-                CarState::Racing
+    pub fn update_state(&mut self, track: &Track, game_state: &mut GameState, game_time_s: f32) {
+        match self.state {
+            CarState::Racing => {
+                if track.is_within_track(&self.pos) {
+                    if track.is_finished(&self.pos) {
+                        game_state.end_time = Some(game_time_s);
+                        self.state = CarState::Finished;
+                    } else {
+                        game_state.ticks += 1;
+                        self.state = CarState::Racing;
+                    }
+                } else {
+                    game_state.end_time = Some(game_time_s);
+                    self.state = CarState::Crashed
+                }
+                game_state.state = self.state;
             }
-        } else {
-            CarState::Crashed
+            _ => {}
         }
     }
+
 }
