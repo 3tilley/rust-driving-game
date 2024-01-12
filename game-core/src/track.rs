@@ -1,5 +1,5 @@
+use crate::car::TerminationCondition;
 use crate::coordinates::{Boundary, Vec2d};
-use std::sync::Arc;
 
 pub trait TrackSection {
     fn is_within(&self, pos: &Vec2d) -> bool;
@@ -51,6 +51,7 @@ pub struct Track {
     pub start: Vec2d,
     pub finish_line: Boundary,
     pub sections: Vec<Box<dyn TrackSection + Send + Sync>>,
+    pub termination_condition: TerminationCondition,
 }
 
 impl Track {

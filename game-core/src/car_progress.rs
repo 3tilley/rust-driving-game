@@ -1,5 +1,4 @@
 use crate::car::CarState;
-use bevy::utils::default;
 
 #[derive(Copy, Clone, Debug, Default)]
 pub struct CarProgress {

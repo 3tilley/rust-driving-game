@@ -1,18 +1,17 @@
 use bevy::prelude::*;
-use std::ops::Neg;
 // use bevy_ninepatch::*;
 use bevy_debug_grid::*;
-use bevy_nine_slice_ui::NineSliceMaterial;
-use rust_driving_game::car::{Car, CarState, PhysicsConstants};
-use rust_driving_game::car_progress::CarProgress;
-use rust_driving_game::coordinates::{Boundary, LineType, Vec2d};
-use rust_driving_game::debug_grid::spawn_floor_grid;
-use rust_driving_game::input::{Accelerator, Direction, KeyInput};
-use rust_driving_game::track::{ParallelRectSection, Track};
+use rust_driving_game_core::car::{Car, CarState, PhysicsConstants};
+use rust_driving_game_core::car_progress::CarProgress;
+use rust_driving_game_core::coordinates::{LineType, Vec2d};
+use rust_driving_game_core::default_tracks;
+// use rust_driving_game_core::debug_grid::spawn_floor_grid;
+use rust_driving_game_core::input::{Accelerator, Direction, KeyInput};
+use rust_driving_game_core::track::Track;
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, DebugGridPlugin::without_floor_grid()))
+        .add_plugins(DefaultPlugins)
         .insert_resource(ClearColor(Color::rgb(0.9, 0.9, 0.9)))
         // .insert_non_send_resource(track)
         .add_systems(Startup, (setup, spawn_floor_grid))
@@ -75,23 +74,6 @@ impl WallBundle {
         );
         bundle
     }
-}
-
-fn make_track(// world: &mut World
-) -> TrackComponent {
-    let track_sect = ParallelRectSection {
-        left_x: -50.0,
-        right_x: 50.0,
-        top_y: 380.0,
-        bottom_y: -10.0,
-    };
-    let track = Track {
-        start: Default::default(),
-        finish_line: Boundary::horizontal(350.0, true),
-        sections: vec![Box::new(track_sect)],
-    };
-    // world.insert_non_send_resource(TrackComponent(track));
-    TrackComponent(track)
 }
 
 fn setup(
@@ -162,14 +144,14 @@ fn setup(
         },
     ), StateBoard));
 
-    let track = make_track();
+    let track = default_tracks::make_track();
     track.0.sections.iter().for_each(|section| {
         section.edges().iter().for_each(|edge| {
             commands.spawn(WallBundle::new(edge.0, edge.1));
         })
     });
 
-    commands.spawn(make_track());
+    commands.spawn(default_tracks::make_track());
 
     // Finish line sprite
     let finish_line_handle = asset_server.load("finish-line-64x64.png");

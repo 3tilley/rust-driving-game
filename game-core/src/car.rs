@@ -2,8 +2,6 @@ use crate::car_progress::CarProgress;
 use crate::coordinates::Vec2d;
 use crate::input::{Accelerator, Direction, KeyInput};
 use crate::track::Track;
-use bevy::math::Vec3;
-use std::cmp::min;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Default)]
 pub enum CarState {
@@ -12,6 +10,21 @@ pub enum CarState {
     Finished,
     Racing,
     Crashed,
+    TimedOut,
+}
+
+pub enum TerminationCondition {
+    Ticks(u64),
+    Seconds(f32),
+}
+
+impl TerminationCondition {
+    pub fn is_timed_out(&self, ticks: u64, time: f32) -> bool {
+        match self {
+            TerminationCondition::Ticks(max_ticks) => max_ticks > &ticks,
+            TerminationCondition::Seconds(max_s) => max_s > &time,
+        }
+    }
 }
 
 impl CarState {
@@ -21,6 +34,7 @@ impl CarState {
             CarState::Finished => "Finished".to_string(),
             CarState::Racing => "Racing".to_string(),
             CarState::Crashed => "Crashed".to_string(),
+            CarState::TimedOut => "TimedOut".to_string(),
         }
     }
 }
@@ -136,6 +150,8 @@ impl Car {
                     if track.is_finished(&self.pos) {
                         game_state.end_time = Some(game_time_s);
                         self.state = CarState::Finished;
+                    } else if track.termination_condition.is_timed_out(game_state.ticks, game_time_s - game_state.start_time) {
+                        self.state = CarState::TimedOut;
                     } else {
                         game_state.ticks += 1;
                         self.state = CarState::Racing;

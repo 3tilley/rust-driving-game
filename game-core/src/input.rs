@@ -58,11 +58,19 @@ impl KeyInput {
     }
 }
 
-pub trait Input {
-    fn get_input() -> KeyInput;
+pub trait InputProvider {
+    fn get_input(&self) -> KeyInput;
 }
 
-pub struct TerminalInput {}
+pub struct SingleInput {
+    pub input: KeyInput,
+}
+
+impl InputProvider for SingleInput {
+    fn get_input(&self) -> KeyInput {
+        self.get_input()
+    }
+}
 
 // impl Input for TerminalInput {
 //
