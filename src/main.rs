@@ -24,7 +24,7 @@ const CAR_SIZE: Vec3 = Vec3::new(2.0, 5.0, 0.0);
 const CAR_COLOUR: Color = Color::rgb(0.3, 0.3, 0.7);
 const SCOREBOARD_FONT_SIZE: f32 = 40.0;
 const SCOREBOARD_TEXT_PADDING: Val = Val::Px(5.0);
-const STATEBOARD_TEXT_PADDING: Val = Val::Px(25.0);
+const STATEBOARD_TEXT_PADDING: Val = Val::Px(40.0);
 const TEXT_COLOR: Color = Color::BLACK;
 const SCORE_COLOR: Color = Color::rgb(1.0, 0.5, 0.5);
 // const WALL_COLOR: Color = Color::rgb(0.8, 0.8, 0.8);
@@ -119,7 +119,7 @@ fn setup(
     ));
 
     // Scoreboard
-    commands.spawn(
+    commands.spawn((
         TextBundle::from_sections([
             TextSection::new(
                 "Time: ",
@@ -145,7 +145,7 @@ fn setup(
             top: SCOREBOARD_TEXT_PADDING,
             left: SCOREBOARD_TEXT_PADDING,
             ..default()
-        }),
+        }), ScoreBoard)
     );
 
     commands.spawn((TextBundle::from_section("",
@@ -275,8 +275,8 @@ fn reset_car(
 fn check_state(
     mut car_query: Query<(&mut CarComponent, &mut CarProgressComponent)>,
     track_res: Query<&TrackComponent>,
-    mut score_query: Query<(&mut Text, &ScoreBoard)>,
-    mut state_query: Query<(&mut Text, &StateBoard)>,
+    mut score_query: Query<(&mut Text), (With<ScoreBoard>, Without<StateBoard>)>,
+    mut state_query: Query<(&mut Text), With<StateBoard>>,
     time: Res<Time>,
 ) {
     let mut car = car_query.single_mut();
@@ -288,7 +288,7 @@ fn check_state(
     let mut timer = score_query.single_mut();
     let mut state_board = state_query.single_mut();
     if state == CarState::Racing {
-        timer.0.sections[1].value = format!("{:.2}", time.elapsed_seconds() - car.1 .0.start_time);
+        timer.sections[1].value = format!("{:.4}", time.elapsed_seconds() - car.1 .0.start_time);
     }
-    state_board.0.sections[0].value = state.to_string().into();
+    state_board.sections[0].value = state.to_string().into();
 }
