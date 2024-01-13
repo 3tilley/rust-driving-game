@@ -8,6 +8,7 @@ use rust_driving_game_core::default_tracks;
 // use rust_driving_game_core::debug_grid::spawn_floor_grid;
 use rust_driving_game_core::input::{Accelerator, Direction, KeyInput};
 use rust_driving_game_core::track::Track;
+use rust_driving_game_core::gameloop::TIME_PER_TICK;
 
 fn main() {
     App::new()
@@ -16,6 +17,7 @@ fn main() {
         // .insert_non_send_resource(track)
         .add_systems(Startup, (setup, spawn_floor_grid))
         .add_systems(FixedUpdate, (move_car, check_state, reset_car))
+        .insert_resource(Time::<Fixed>::from_seconds(TIME_PER_TICK.into()))
         .run();
 }
 
@@ -144,14 +146,13 @@ fn setup(
         },
     ), StateBoard));
 
-    let track = default_tracks::make_track();
+    let track = TrackComponent(default_tracks::make_track());
     track.0.sections.iter().for_each(|section| {
         section.edges().iter().for_each(|edge| {
             commands.spawn(WallBundle::new(edge.0, edge.1));
         })
     });
 
-    commands.spawn(default_tracks::make_track());
 
     // Finish line sprite
     let finish_line_handle = asset_server.load("finish-line-64x64.png");
@@ -160,9 +161,9 @@ fn setup(
     //     asset_server.load("panel_atlas.png"),
     //     Rect::new(0., 0., 32., 32.),
     // );
-    let (finish_pos, finish_scale) = match track.0.finish_line.line_type {
-        LineType::Horizontal(y) => (Vec3::new(0.0, y, 0.0), Vec3::new(50.0, 4.0, 0.0) / 8.0),
-        LineType::Vertical(x) => (Vec3::new(x, 0.0, 0.0), Vec3::new(4.0, 50.0, 0.0) / 8.0),
+    let (finish_pos, finish_scale) = match &track.0.finish_line.line_type {
+        LineType::Horizontal(y) => (Vec3::new(0.0, *y, 0.0), Vec3::new(50.0, 4.0, 0.0) / 8.0),
+        LineType::Vertical(x) => (Vec3::new(*x, 0.0, 0.0), Vec3::new(4.0, 50.0, 0.0) / 8.0),
         LineType::Diagonal(_, _) => unimplemented!(),
     };
     let finish_line_bundle = SpriteBundle {
@@ -182,6 +183,7 @@ fn setup(
         },
         ..default()
     };
+    commands.spawn(track);
     commands.spawn(finish_line_bundle);
 }
 

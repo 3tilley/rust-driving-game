@@ -56,6 +56,10 @@ impl KeyInput {
     pub fn is_empty(&self) -> bool {
         self.acceleration.is_none() && self.direction.is_none()
     }
+
+    pub fn from_directions(up: bool, down: bool, left: bool, right: bool) -> KeyInput {
+        KeyInput::new(Accelerator::from_up_down(up, down), Direction::from_left_right(left, right))
+    }
 }
 
 pub trait InputProvider {
@@ -66,9 +70,15 @@ pub struct SingleInput {
     pub input: KeyInput,
 }
 
+impl From<KeyInput> for SingleInput {
+    fn from(value: KeyInput) -> Self {
+        SingleInput { input: value }
+    }
+}
+
 impl InputProvider for SingleInput {
     fn get_input(&self) -> KeyInput {
-        self.get_input()
+        self.input
     }
 }
 

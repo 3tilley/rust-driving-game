@@ -12,7 +12,9 @@ impl CarProgress {
     pub fn new(start_time: f32) -> CarProgress {
         CarProgress {
             start_time,
-            ..default()
+            ..Default::default()
         }
     }
+
+
 }
