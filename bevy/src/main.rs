@@ -229,12 +229,13 @@ fn move_car(
         }
         CarState::Racing => {
             let consts = PhysicsConstants::default();
-            let (x_d, y_d, theta_d) =
+            if let Some((x_d, y_d, theta_d)) =
                 car.1
                      .0
-                    .update_position(&consts, time.delta_seconds(), key_input);
-            car.0.rotate_local_z(theta_d);
-            car.0.translation += Vec3::new(x_d, y_d, 0.0);
+                    .update_position(&consts, time.delta_seconds(), key_input) {
+                car.0.rotate_local_z(theta_d);
+                car.0.translation += Vec3::new(x_d, y_d, 0.0);
+            }
         }
         _ => {}
     }
